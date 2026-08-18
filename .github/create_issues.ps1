@@ -2,7 +2,7 @@
 .SYNOPSIS
     Script automatizado para criar as Issues do projeto BuscaCep no GitHub via GitHub CLI (gh).
 .DESCRIPTION
-    Le o catalogo de issues em .github/issues/ e as publica no repositorio remoto.
+    Le o catalogo de issues em .github/issues/ e as publica no repositorio remoto com suas respectivas labels.
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .github/create_issues.ps1
 #>
@@ -33,6 +33,15 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# 1. Cria labels se nao existirem
+Write-Host "`n[+] Criando e verificando labels do repositorio..." -ForegroundColor Yellow
+& gh label create "resilience" --color "8b5cf6" --description "Polly resilience, retry and fallback policies" --force 2>$null
+& gh label create "performance" --color "f59e0b" --description "Caching and performance metrics" --force 2>$null
+& gh label create "validation" --color "ef4444" --description "Input validation and error handling" --force 2>$null
+& gh label create "ui" --color "06b6d4" --description "User interface improvements" --force 2>$null
+& gh label create "testing" --color "10b981" --description "Testing and chaos simulation" --force 2>$null
+
+# 2. Issues catalogadas
 $issues = @(
     @{
         Title = "[Resiliencia] Motor Polly com Timeout de 2s, Retry e Fallback ViaCEP para BrasilAPI (#01)"
@@ -47,12 +56,12 @@ $issues = @(
     @{
         Title = "[Validacao] Validacao Estrita de CEPs e Respostas Padronizadas RFC 7807 (#03)"
         BodyFile = ".github/issues/issue-03-validation-rfc7807.md"
-        Labels = "validation,security"
+        Labels = "validation"
     },
     @{
         Title = "[Feature] Processamento de CEPs em Lote com Barra de Progresso e Exportacao CSV/JSON (#04)"
         BodyFile = ".github/issues/issue-04-batch-search-export.md"
-        Labels = "enhancement,ui"
+        Labels = "ui,enhancement"
     },
     @{
         Title = "[Resiliencia] Simulador de Caos e Console de Logs em Tempo Real (#05)"
@@ -70,4 +79,4 @@ foreach ($item in $issues) {
     }
 }
 
-Write-Host "[OK] Todas as issues do BuscaCep foram publicadas com sucesso!" -ForegroundColor Green
+Write-Host "[OK] Todas as issues do BuscaCep foram processadas com sucesso!" -ForegroundColor Green
