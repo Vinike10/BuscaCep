@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Microsserviço moderno de busca, validação e enriquecimento de CEPs com resiliência Polly (Retry e Fallback ViaCEP/BrasilAPI) e Caching de 24h.">
+  <meta name="keywords" content="CEP, ViaCEP, BrasilAPI, Polly, Resiliencia, C# .NET, Microservico, API, Enderecos">
+  <meta name="author" content="Vinicius">
+  <title>BuscaCep • Microsserviço de Busca & Validação de Endereços</title>
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./css/tokens.css">
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+
+  <!-- Header & Navigation -->
+  <header class="header">
+    <div class="nav-container">
+      <a href="#" class="logo-group">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+        </div>
+        <span class="logo-text">BuscaCep</span>
+      </a>
+
+      <!-- Providers Health Badges -->
+      <div class="nav-badges">
+        <div class="status-pill" title="Provedor Primário: ViaCEP">
+          <span class="status-dot pulse"></span>
+          <span>ViaCEP: <strong>Online</strong></span>
+        </div>
+        <div class="status-pill" title="Fallback 1: BrasilAPI">
+          <span class="status-dot pulse"></span>
+          <span>BrasilAPI: <strong>Online</strong></span>
+        </div>
+        <div class="status-pill" title="Cache em Memória / Storage (24h)">
+          <span style="color:var(--accent-amber);">⚡</span>
+          <span>Cache: <strong>Ativo</strong></span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="nav-actions">
+        <button id="btn-theme-toggle" class="btn-icon" aria-label="Alternar Tema Claro/Escuro" title="Alternar Tema">
+          <span id="theme-toggle-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-tag">
+        <span>🛡️ Polly Resilience Engine • 2s Timeout • Retry & Fallback • 24h Cache</span>
+      </div>
+      <h1 class="hero-title">
+        Busca & Validação de <span class="gradient-text">CEPs e Endereços</span>
+      </h1>
+      <p class="hero-subtitle">
+        Microsserviço de alta disponibilidade com chaveamento automático entre ViaCEP e BrasilAPI, validação estrita RFC 7807 e respostas instantâneas em cache.
+      </p>
+
+      <!-- Tabs Navigation -->
+      <nav class="tab-navigation">
+        <button class="tab-btn active" data-tab="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Consulta & Mapa
+        </button>
+        <button class="tab-btn" data-tab="batch">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+          Busca em Lote
+        </button>
+        <button class="tab-btn" data-tab="chaos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          Simulador de Resiliência
+        </button>
+        <button class="tab-btn" data-tab="api">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          Documentação & Snippets
+        </button>
+        <button class="tab-btn" data-tab="cache">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+          Métricas de Cache
+        </button>
+      </nav>
+    </section>
+
+    <!-- TAB 1: Live Search & Map Visualizer -->
+    <div id="tab-search" class="tab-panel active">
+      <!-- Search Card -->
+      <div class="search-card">
+        <div class="search-form">
+          <div class="search-input-wrapper">
+            <div class="input-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            </div>
+            <input 
+              type="text" 
+              id="cep-input" 
+              class="cep-input" 
+              placeholder="Digite o CEP (ex: 01001-000)" 
+              maxlength="9" 
+              autocomplete="off"
+              value="01001-000"
+            />
+            <button id="btn-clear-input" class="btn-clear-input" aria-label="Limpar campo">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <button id="btn-search" class="btn-search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <span>Consultar</span>
+            </button>
+          </div>
+
+          <!-- Quick CEP Chips -->
+          <div class="quick-chips-group">
+            <span class="quick-label">Exemplos rápidos:</span>
+            <button class="chip-btn" data-cep="01001000">📍 Praça da Sé (SP)</button>
+            <button class="chip-btn" data-cep="22041001">🏖️ Copacabana (RJ)</button>
+            <button class="chip-btn" data-cep="70150900">🏛️ Brasília (DF)</button>
+            <button class="chip-btn" data-cep="96010000">🧉 Pelotas (RS)</button>
+            <button class="chip-btn" data-cep="69005010">🎭 Teatro Amazonas (AM)</button>
+            <button class="chip-btn" data-cep="40020000">🥁 Pelourinho (BA)</button>
+          </div>
+        </div>
+
+        <!-- Polly Pipeline Visualizer -->
+        <div class="pipeline-card">
+          <div class="pipeline-header">
+            <span class="pipeline-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              Fluxo de Execução com Resiliência Polly
+            </span>
+          </div>
+          <div class="pipeline-steps">
+            <div id="step-cache" class="pipeline-step">
+              <div class="step-num">1</div>
+              <div class="step-info">
+                <span class="step-name">Cache 24h</span>
+                <span class="step-status">Aguardando...</span>
+              </div>
+            </div>
+            <div id="step-viacep" class="pipeline-step">
+              <div class="step-num">2</div>
+              <div class="step-info">
+                <span class="step-name">ViaCEP (Primário)</span>
+                <span class="step-status">Aguardando...</span>
+              </div>
+            </div>
+            <div id="step-brasilapi" class="pipeline-step">
+              <div class="step-num">3</div>
+              <div class="step-info">
+                <span class="step-name">BrasilAPI (Fallback)</span>
+                <span class="step-status">Aguardando...</span>
+              </div>
+            </div>
+            <div id="step-enrichment" class="pipeline-step">
+              <div class="step-num">4</div>
+              <div class="step-info">
+                <span class="step-name">Enriquecimento</span>
+                <span class="step-status">Aguardando...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Result Display (RFC 7807) -->
+      <div id="error-section" style="display:none; margin-bottom: 2rem;">
+        <div class="details-card" style="border-color: rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.05);">
+          <div class="card-header-flex">
+            <h2 id="error-title" style="color: var(--accent-rose); font-size: 1.25rem;">Erro na Requisição</h2>
+            <span class="source-badge" style="background: rgba(244, 63, 94, 0.2); color: var(--accent-rose);">RFC 7807 Problem Details</span>
+          </div>
+          <p id="error-detail" style="color: var(--text-main); font-size: 0.95rem;"></p>
+          <pre id="error-json-output" style="background: #090d16; padding: 1rem; border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 0.8rem; color: #f87171; overflow-x: auto;"></pre>
+        </div>
+      </div>
+
+      <!-- Results Grid (Card + Map) -->
+      <div id="result-section" class="result-grid">
+        <!-- Details Card -->
+        <div class="details-card">
+          <div class="card-header-flex">
+            <h2 id="result-cep-text" class="result-cep-title">01001-000</h2>
+            <span id="result-source-badge" class="source-badge viacep">⚡ VIA CEP</span>
+          </div>
+
+          <div class="address-main-info">
+            <span id="result-logradouro" class="logradouro-text">Praça da Sé</span>
+            <span id="result-bairro-cidade" class="bairro-cidade-text">Sé • São Paulo - SP</span>
+          </div>
+
+          <div class="address-meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Estado & Região</span>
+              <span id="result-estado" class="meta-val">São Paulo (Sudeste)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Código IBGE</span>
+              <span id="result-ibge" class="meta-val">3550308</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">DDD Telefônico</span>
+              <span id="result-ddd" class="meta-val">(11)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Código SIAFI</span>
+              <span id="result-siafi" class="meta-val">7107</span>
+            </div>
+          </div>
+
+          <div class="action-buttons-row">
+            <button id="btn-copy-address" class="btn-action">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copiar Endereço
+            </button>
+            <a id="btn-google-maps" href="#" target="_blank" rel="noopener noreferrer" class="btn-action">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+              Google Maps
+            </a>
+            <a id="btn-waze" href="#" target="_blank" rel="noopener noreferrer" class="btn-action">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+              Waze
+            </a>
+          </div>
+        </div>
+
+        <!-- Map Card -->
+        <div class="map-card">
+          <div class="map-header">
+            <span class="map-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+              Localização no Mapa
+            </span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">OpenStreetMap / Leaflet</span>
+          </div>
+          <div id="map-container"></div>
+        </div>
+      </div>
+
+      <!-- JSON Viewer Card -->
+      <div class="json-viewer-card">
+        <div class="json-viewer-header">
+          <span class="json-viewer-title">JSON Enriquecido Retornado pela API</span>
+          <button id="btn-copy-json" class="btn-action" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copiar JSON
+          </button>
+        </div>
+        <pre id="json-output" class="json-code-box">Aguardando consulta...</pre>
+      </div>
+    </div>
+
+    <!-- TAB 2: Batch CEP Search -->
+    <div id="tab-batch" class="tab-panel">
+      <div class="batch-container">
+        <h2 style="font-size:1.3rem; margin-bottom:0.5rem; font-family:var(--font-heading);">Processamento de CEPs em Lote</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">
+          Cole uma lista de CEPs (um por linha) para processar consultas simultâneas com controle de concorrência, caching automático e exportação.
+        </p>
+
+        <textarea id="batch-ceps-input" class="batch-textarea" placeholder="Cole aqui os CEPs, um por linha. Ex:&#10;01001-000&#10;22041-001&#10;70150-900&#10;96010-000"></textarea>
+
+        <div class="batch-actions-bar">
+          <div style="display:flex; gap:0.5rem;">
+            <button id="btn-start-batch" class="btn-search" style="height:46px; padding:0 1.25rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Iniciar Busca em Lote
+            </button>
+            <button id="btn-sample-batch" class="btn-action">
+              Carregar Exemplo (8 Capitais)
+            </button>
+          </div>
+
+          <div style="display:flex; gap:0.5rem;">
+            <button id="btn-export-csv" class="btn-action">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Exportar CSV
+            </button>
+            <button id="btn-export-json" class="btn-action">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Exportar JSON
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-wrapper">
+          <div id="batch-progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="batch-progress-text" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem; text-align:right;">
+          0 de 0 processados
+        </div>
+
+        <!-- Table -->
+        <div class="batch-table-wrapper">
+          <table class="batch-table">
+            <thead>
+              <tr>
+                <th>CEP</th>
+                <th>Status</th>
+                <th>Origem</th>
+                <th>Logradouro</th>
+                <th>Cidade / UF</th>
+                <th>Latência</th>
+              </tr>
+            </thead>
+            <tbody id="batch-table-body">
+              <tr>
+                <td colspan="6" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                  Nenhum lote processado ainda. Clique em "Iniciar Busca em Lote".
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Chaos & Resilience Simulator -->
+    <div id="tab-chaos" class="tab-panel">
+      <div class="chaos-grid">
+        <!-- Controls -->
+        <div class="chaos-controls">
+          <div>
+            <h2 style="font-size:1.3rem; margin-bottom:0.4rem; font-family:var(--font-heading);">Simulador de Resiliência & Caos</h2>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              Injete falhas controladas para testar como o motor Polly lida com timeouts, erros de servidor e faz o chaveamento automático para a BrasilAPI.
+            </p>
+          </div>
+
+          <div class="switch-item">
+            <div class="switch-label-group">
+              <span class="switch-title">Forçar Timeout no ViaCEP (> 2s)</span>
+              <span class="switch-desc">Adiciona 3.5s de atraso artificial no ViaCEP para estourar o limite de 2s e ativar o Fallback para a BrasilAPI.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-force-timeout">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-item">
+            <div class="switch-label-group">
+              <span class="switch-title">Forçar Erro HTTP 500 no ViaCEP</span>
+              <span class="switch-desc">Simula falha de servidor 500 no provedor primário para acionar as 2 tentativas (Retry) e posterior Fallback.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-force-500">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-item">
+            <div class="switch-label-group">
+              <span class="switch-title">Simular Rede Lenta (+1.2s de latência)</span>
+              <span class="switch-desc">Adiciona latência a todas as requisições de rede.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-slow-network">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-item">
+            <div class="switch-label-group">
+              <span class="switch-title">Ignorar Cache (Bypass Cache)</span>
+              <span class="switch-desc">Força sempre a requisição externa à rede mesmo se o CEP já estiver gravado no cache de 24h.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-bypass-cache">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Logs Console -->
+        <div class="log-console">
+          <div class="log-console-header">
+            <span style="font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              Stream de Eventos & Logs de Resiliência
+            </span>
+            <button id="btn-clear-logs" class="btn-action" style="padding:0.2rem 0.5rem; font-size:0.7rem;">Limpar Logs</button>
+          </div>
+          <div id="log-stream" class="log-stream">
+            <div class="log-entry">
+              <span class="log-time">[00:00:00]</span>
+              <span class="log-tag info">INFO</span>
+              <span>Motor de Resiliência pronto. Realize uma consulta para ver os eventos.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: API Explorer & Snippets -->
+    <div id="tab-api" class="tab-panel">
+      <div class="code-generator-card">
+        <div class="lang-tabs">
+          <button class="lang-tab-btn active" data-lang="javascript">JavaScript (Fetch)</button>
+          <button class="lang-tab-btn" data-lang="csharp">C# .NET 8 (Polly v8)</button>
+          <button class="lang-tab-btn" data-lang="curl">cURL</button>
+          <button class="lang-tab-btn" data-lang="python">Python (Requests)</button>
+          <button class="lang-tab-btn" data-lang="php">PHP 8 (cURL)</button>
+        </div>
+        <div class="code-display-area">
+          <button id="btn-copy-code" class="btn-copy-code">Copiar Código</button>
+          <pre id="code-snippet-pre" class="code-pre"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Cache Metrics & Explorer -->
+    <div id="tab-cache" class="tab-panel">
+      <!-- Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <span class="metric-label">Taxa de Acerto (Hit Ratio)</span>
+          <span id="metric-hit-rate" class="metric-val" style="color:var(--accent-emerald);">0.0%</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Total de Consultas</span>
+          <span id="metric-total-queries" class="metric-val">0</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Tempo de Rede Economizado</span>
+          <span id="metric-saved-time" class="metric-val" style="color:var(--accent-cyan);">0.00s</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">CEPs em Cache (24h)</span>
+          <span id="metric-cached-items" class="metric-val" style="color:var(--accent-amber);">0</span>
+        </div>
+      </div>
+
+      <!-- Cache Table Card -->
+      <div class="batch-container" style="padding:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h3 style="font-size:1.1rem; font-family:var(--font-heading);">Registros em Cache Local (Memória / Storage)</h3>
+          <button id="btn-clear-cache" class="btn-action" style="color:var(--accent-rose); border-color:rgba(244, 63, 94, 0.3);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Esvaziar Cache
+          </button>
+        </div>
+
+        <div class="batch-table-wrapper">
+          <table class="batch-table">
+            <thead>
+              <tr>
+                <th>CEP</th>
+                <th>Logradouro</th>
+                <th>Cidade / UF</th>
+                <th>Expiração (TTL)</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="cache-table-body">
+              <tr>
+                <td colspan="5" style="text-align:center; color:var(--text-muted); padding:1.5rem;">
+                  Nenhum CEP armazenado no cache no momento.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div style="max-width: 1280px; margin: 0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+      <span><strong>BuscaCep</strong> • Microsserviço de Busca & Validação de Endereços</span>
+      <span>Resiliência com Polly (Timeout 2s, Retry 2x & Fallbacks) • Caching 24h</span>
+    </div>
+  </footer>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Application Bootstrap -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

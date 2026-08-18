@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentação do BuscaCep
+    url: https://github.com/Vinike10/BuscaCep#readme
+    about: Consulte a documentação e guia do microsserviço.
